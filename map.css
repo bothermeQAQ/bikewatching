@@ -64,6 +64,16 @@
     opacity 120ms ease-out;
 }
 
+.bike-lanes-overlay path {
+  fill: none;
+  stroke: var(--green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: 0.58;
+  stroke-width: 2.4;
+  pointer-events: none;
+}
+
 #map circle:hover {
   fill-opacity: 0.93;
   stroke-width: 2.5;

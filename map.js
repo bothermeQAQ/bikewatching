@@ -20,6 +20,7 @@ let radiusScale = d3.scaleSqrt().range([0, 26]);
 let stationFlow = d3.scaleQuantize().domain([0, 1]).range([0, 0.5, 1]);
 let departuresByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
 let arrivalsByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
+let bikeLaneSelection;
 
 const hasMapboxToken =
   MAPBOX_ACCESS_TOKEN &&
@@ -67,6 +68,8 @@ const map = new mapboxgl.Map({
 map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
 const svg = d3.select('#map').select('svg');
+const bikeLaneLayer = svg.append('g').attr('class', 'bike-lanes-overlay');
+const stationLayer = svg.append('g').attr('class', 'stations-overlay');
 const status = document.querySelector('#loading-status');
 const timeSlider = document.querySelector('#time-slider');
 const selectedTime = document.querySelector('#selected-time');
@@ -77,16 +80,22 @@ map.on('load', async () => {
   addBikeLaneLayer('cambridge-bike-lanes', CAMBRIDGE_BIKE_LANES_URL);
 
   try {
-    const [stationData] = await Promise.all([
+    const [stationData, , bostonBikeLanes, cambridgeBikeLanes] = await Promise.all([
       d3.json(STATIONS_URL),
       d3.csv(TRAFFIC_URL, parseTrip),
+      d3.json(BOSTON_BIKE_LANES_URL),
+      d3.json(CAMBRIDGE_BIKE_LANES_URL),
     ]);
 
     baseStations = stationData.data.stations;
     const stations = computeStationTraffic(baseStations, -1);
     radiusScale.domain([0, d3.max(stations, (d) => d.totalTraffic) || 1]);
 
-    stationSelection = svg
+    if (!hasMapboxToken) {
+      renderBikeLaneFallback([bostonBikeLanes, cambridgeBikeLanes]);
+    }
+
+    stationSelection = stationLayer
       .selectAll('circle')
       .data(stations, (d) => d.short_name)
       .join('circle')
@@ -188,7 +197,7 @@ function filterByMinute(tripsByMinute, minute) {
 function updateStationAttributes(stations, minute) {
   radiusScale.range(minute === -1 ? [0, 26] : [2.5, 44]);
 
-  stationSelection = svg
+  stationSelection = stationLayer
     .selectAll('circle')
     .data(stations, (d) => d.short_name)
     .join('circle')
@@ -225,6 +234,8 @@ function getCoords(station) {
 }
 
 function updatePositions() {
+  updateBikeLaneFallback();
+
   if (!stationSelection) {
     return;
   }
@@ -232,6 +243,50 @@ function updatePositions() {
   stationSelection
     .attr('cx', (station) => getCoords(station).cx)
     .attr('cy', (station) => getCoords(station).cy);
+}
+
+function renderBikeLaneFallback(geojsonCollections) {
+  const features = geojsonCollections.flatMap((collection) => collection.features ?? []);
+
+  bikeLaneSelection = bikeLaneLayer
+    .selectAll('path')
+    .data(features)
+    .join('path');
+
+  updateBikeLaneFallback();
+}
+
+function updateBikeLaneFallback() {
+  if (!bikeLaneSelection) {
+    return;
+  }
+
+  bikeLaneSelection.attr('d', (feature) => getBikeLanePath(feature.geometry));
+}
+
+function getBikeLanePath(geometry) {
+  if (!geometry) {
+    return '';
+  }
+
+  if (geometry.type === 'LineString') {
+    return getLineStringPath(geometry.coordinates);
+  }
+
+  if (geometry.type === 'MultiLineString') {
+    return geometry.coordinates.map(getLineStringPath).join('');
+  }
+
+  return '';
+}
+
+function getLineStringPath(coordinates) {
+  return coordinates
+    .map(([longitude, latitude], index) => {
+      const { x, y } = map.project(new mapboxgl.LngLat(+longitude, +latitude));
+      return `${index === 0 ? 'M' : 'L'}${x},${y}`;
+    })
+    .join('');
 }
 
 function bindMapEvents() {
