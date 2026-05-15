@@ -18,15 +18,15 @@ Then open http://localhost:8000.
 
 ## Mapbox Token
 
-The project intentionally does not include a private key or invented token.
+The project uses a Mapbox public access token in `map.js` for Mapbox-hosted tiles. Do not replace it with a private secret key.
 
-If you want Mapbox-hosted tiles, open `map.js` and replace:
+If you ever need to change the token, open `map.js` and update:
 
 ```js
-const MAPBOX_ACCESS_TOKEN = 'PASTE_YOUR_MAPBOX_PUBLIC_TOKEN_HERE';
+const MAPBOX_ACCESS_TOKEN = '...';
 ```
 
-with your Mapbox public access token. While that placeholder is unchanged, the site uses an OpenStreetMap raster fallback inside Mapbox GL JS so the visualization still runs.
+The site also keeps a no-token raster fallback inside Mapbox GL JS so the visualization can still run if the public token is removed.
 
 ## Datasets
 
