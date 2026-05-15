@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bike icon">
+  <rect width="64" height="64" rx="14" fill="#111111"/>
+  <circle cx="18" cy="42" r="10" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <circle cx="46" cy="42" r="10" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <path d="M18 42 27 26h8l11 16M27 26l8 16M27 26h-5M34 21h9" fill="none" stroke="#39d98a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M35 21l-2 5" stroke="#39d98a" stroke-width="4" stroke-linecap="round"/>
+</svg>
