@@ -6,9 +6,9 @@
   <title>Bikewatching</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css">
-  <link rel="stylesheet" href="global.css?v=20260515">
-  <link rel="stylesheet" href="map.css?v=20260515">
-  <script src="map.js?v=20260515-token" type="module"></script>
+  <link rel="stylesheet" href="global.css?v=20260515-flow">
+  <link rel="stylesheet" href="map.css?v=20260515-flow">
+  <script src="map.js?v=20260515-flow" type="module"></script>
 </head>
 <body>
   <header class="site-header">
@@ -48,15 +48,15 @@
 
     <section class="legend" aria-label="Traffic flow color legend">
       <div class="legend-title">Traffic flow</div>
-      <div class="legend-item" style="--departure-ratio: 1">
+      <div class="legend-item" data-flow="departure">
         <span class="legend-swatch"></span>
         <span>More departures</span>
       </div>
-      <div class="legend-item" style="--departure-ratio: 0.5">
+      <div class="legend-item" data-flow="balanced">
         <span class="legend-swatch"></span>
         <span>Balanced</span>
       </div>
-      <div class="legend-item" style="--departure-ratio: 0">
+      <div class="legend-item" data-flow="arrival">
         <span class="legend-swatch"></span>
         <span>More arrivals</span>
       </div>

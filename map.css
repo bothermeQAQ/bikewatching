@@ -51,17 +51,29 @@
 }
 
 #map circle {
-  --departure-ratio: 0.5;
-  fill: var(--color);
-  fill-opacity: 0.74;
+  --flow-color: var(--flow-balanced);
+  fill: var(--flow-color);
+  fill-opacity: 0.82;
   stroke: #ffffff;
-  stroke-width: 1.4;
+  stroke-width: 1.6;
   paint-order: stroke;
   pointer-events: auto;
   transition:
     r 120ms ease-out,
     fill 120ms ease-out,
     opacity 120ms ease-out;
+}
+
+#map circle[data-flow="departure"] {
+  --flow-color: var(--flow-departures);
+}
+
+#map circle[data-flow="balanced"] {
+  --flow-color: var(--flow-balanced);
+}
+
+#map circle[data-flow="arrival"] {
+  --flow-color: var(--flow-arrivals);
 }
 
 .bike-lanes-overlay path {

@@ -22,7 +22,6 @@ const FILTER_WINDOW = 60;
 let baseStations = [];
 let stationSelection;
 let radiusScale = d3.scaleSqrt().range([0, 26]);
-let stationFlow = d3.scaleQuantize().domain([0, 1]).range([0, 0.5, 1]);
 let departuresByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
 let arrivalsByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
 let bikeLaneSelection;
@@ -207,7 +206,7 @@ function updateStationAttributes(stations, minute) {
     .data(stations, (d) => d.short_name)
     .join('circle')
     .attr('r', (d) => radiusScale(d.totalTraffic))
-    .style('--departure-ratio', getDepartureRatio)
+    .attr('data-flow', getFlowState)
     .attr('opacity', (d) => (d.totalTraffic > 0 ? 1 : 0.16));
 
   stationSelection
@@ -218,12 +217,22 @@ function updateStationAttributes(stations, minute) {
     );
 }
 
-function getDepartureRatio(station) {
+function getFlowState(station) {
   if (!station.totalTraffic) {
-    return 0.5;
+    return 'balanced';
   }
 
-  return stationFlow(station.departures / station.totalTraffic);
+  const departureRatio = station.departures / station.totalTraffic;
+
+  if (departureRatio > 0.55) {
+    return 'departure';
+  }
+
+  if (departureRatio < 0.45) {
+    return 'arrival';
+  }
+
+  return 'balanced';
 }
 
 function updateScatterPlot(minute) {
