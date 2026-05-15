@@ -50,6 +50,50 @@
   pointer-events: none;
 }
 
+#station-tooltip {
+  position: absolute;
+  z-index: 2;
+  max-width: min(260px, calc(100% - 32px));
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(16px);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+#station-tooltip[hidden] {
+  display: none;
+}
+
+#station-tooltip strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+#station-tooltip dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+#station-tooltip dt {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+#station-tooltip dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 #map circle {
   --flow-color: var(--flow-balanced);
   fill: var(--flow-color);
@@ -89,6 +133,12 @@
 #map circle:hover {
   fill-opacity: 0.93;
   stroke-width: 2.5;
+}
+
+#map circle:focus-visible {
+  outline: none;
+  stroke: #111111;
+  stroke-width: 3;
 }
 
 .mapboxgl-ctrl-logo,

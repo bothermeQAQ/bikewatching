@@ -20,15 +20,17 @@ const MINUTES_PER_DAY = 24 * 60;
 const FILTER_WINDOW = 60;
 
 let baseStations = [];
+let currentStations = [];
 let stationSelection;
 let radiusScale = d3.scaleSqrt().range([0, 26]);
 let departuresByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
 let arrivalsByMinute = Array.from({ length: MINUTES_PER_DAY }, () => []);
 let bikeLaneSelection;
+let isPointerDown = false;
 
 const hasMapboxToken =
   MAPBOX_ACCESS_TOKEN &&
-  MAPBOX_ACCESS_TOKEN !== 'PASTE_YOUR_MAPBOX_PUBLIC_TOKEN_HERE';
+  MAPBOX_ACCESS_TOKEN.startsWith('pk.');
 
 mapboxgl.accessToken = hasMapboxToken ? MAPBOX_ACCESS_TOKEN : '';
 
@@ -78,6 +80,18 @@ const status = document.querySelector('#loading-status');
 const timeSlider = document.querySelector('#time-slider');
 const selectedTime = document.querySelector('#selected-time');
 const anyTimeLabel = document.querySelector('#any-time');
+const tooltip = document.querySelector('#station-tooltip');
+const mapContainer = map.getContainer();
+
+mapContainer.addEventListener('mousemove', showNearestStationTooltip);
+mapContainer.addEventListener('mouseleave', hideTooltip);
+mapContainer.addEventListener('mousedown', () => {
+  isPointerDown = true;
+  hideTooltip();
+});
+window.addEventListener('mouseup', () => {
+  isPointerDown = false;
+});
 
 map.on('load', async () => {
   addBikeLaneLayer('boston-bike-lanes', BOSTON_BIKE_LANES_URL);
@@ -104,7 +118,10 @@ map.on('load', async () => {
       .data(stations, (d) => d.short_name)
       .join('circle')
       .attr('r', (d) => radiusScale(d.totalTraffic))
-      .attr('aria-label', (d) => d.name);
+      .attr('aria-label', getStationAriaLabel)
+      .attr('data-station-id', (d) => d.short_name)
+      .attr('data-station-name', (d) => d.name)
+      .attr('tabindex', 0);
 
     stationSelection.append('title');
 
@@ -199,6 +216,7 @@ function filterByMinute(tripsByMinute, minute) {
 }
 
 function updateStationAttributes(stations, minute) {
+  currentStations = stations;
   radiusScale.range(minute === -1 ? [0, 26] : [2.5, 44]);
 
   stationSelection = stationLayer
@@ -207,7 +225,16 @@ function updateStationAttributes(stations, minute) {
     .join('circle')
     .attr('r', (d) => radiusScale(d.totalTraffic))
     .attr('data-flow', getFlowState)
-    .attr('opacity', (d) => (d.totalTraffic > 0 ? 1 : 0.16));
+    .attr('opacity', (d) => (d.totalTraffic > 0 ? 1 : 0.16))
+    .attr('aria-label', getStationAriaLabel)
+    .attr('data-station-id', (d) => d.short_name)
+    .attr('data-station-name', (d) => d.name)
+    .attr('tabindex', 0)
+    .on('pointerenter', showTooltip)
+    .on('pointermove', moveTooltip)
+    .on('pointerleave', hideTooltip)
+    .on('focus', showTooltip)
+    .on('blur', hideTooltip);
 
   stationSelection
     .select('title')
@@ -215,6 +242,90 @@ function updateStationAttributes(stations, minute) {
       (d) =>
         `${d.name}\n${d.totalTraffic.toLocaleString()} trips (${d.departures.toLocaleString()} departures, ${d.arrivals.toLocaleString()} arrivals)`
     );
+}
+
+function showNearestStationTooltip(event) {
+  if (isPointerDown || currentStations.length === 0) {
+    return;
+  }
+
+  const mapRect = mapContainer.getBoundingClientRect();
+  const pointer = {
+    x: event.clientX - mapRect.left,
+    y: event.clientY - mapRect.top,
+  };
+  let closestStation;
+  let closestDistance = Infinity;
+
+  for (const station of currentStations) {
+    const { cx, cy } = getCoords(station);
+    const radius = radiusScale(station.totalTraffic);
+    const hitRadius = Math.max(radius, 5) + 4;
+    const distance = Math.hypot(pointer.x - cx, pointer.y - cy);
+
+    if (distance <= hitRadius && distance < closestDistance) {
+      closestStation = station;
+      closestDistance = distance;
+    }
+  }
+
+  if (closestStation) {
+    showTooltip(event, closestStation);
+  } else {
+    hideTooltip();
+  }
+}
+
+function getStationAriaLabel(station) {
+  return `${station.name}, ${station.totalTraffic.toLocaleString()} trips, ${station.departures.toLocaleString()} departures, ${station.arrivals.toLocaleString()} arrivals`;
+}
+
+function showTooltip(event, station) {
+  tooltip.removeAttribute('hidden');
+  tooltip.innerHTML = `
+    <strong>${escapeHTML(station.name)}</strong>
+    <dl>
+      <dt>Total trips</dt>
+      <dd>${station.totalTraffic.toLocaleString()}</dd>
+      <dt>Departures</dt>
+      <dd>${station.departures.toLocaleString()}</dd>
+      <dt>Arrivals</dt>
+      <dd>${station.arrivals.toLocaleString()}</dd>
+    </dl>
+  `;
+
+  moveTooltip(event, station);
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function moveTooltip(event, station) {
+  if (tooltip.hasAttribute('hidden')) {
+    return;
+  }
+
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const stationPoint = getCoords(station);
+  const pointerX = Number.isFinite(event?.clientX) ? event.clientX - mapRect.left : stationPoint.cx;
+  const pointerY = Number.isFinite(event?.clientY) ? event.clientY - mapRect.top : stationPoint.cy;
+  const tooltipWidth = tooltip.offsetWidth || 220;
+  const tooltipHeight = tooltip.offsetHeight || 104;
+  const margin = 12;
+  const x = Math.min(Math.max(pointerX + margin, margin), mapRect.width - tooltipWidth - margin);
+  const y = Math.min(Math.max(pointerY + margin, margin), mapRect.height - tooltipHeight - margin);
+
+  tooltip.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function hideTooltip() {
+  tooltip.setAttribute('hidden', '');
 }
 
 function getFlowState(station) {
@@ -236,6 +347,7 @@ function getFlowState(station) {
 }
 
 function updateScatterPlot(minute) {
+  hideTooltip();
   const stations = computeStationTraffic(baseStations, minute);
   updateStationAttributes(stations, minute);
   updatePositions();
